@@ -104,7 +104,10 @@ local TextService = game:GetService("TextService")
 
 local ANALYTICS_TOKEN = "05de7f9fd320d3b8428cd1c77014a337b85b6c8efee2c5914f5ab5700c354b9a"
 local reporter = nil
-local fetchSuccess, fetchResult = pcall(function() return game:HttpGet("https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/refs/heads/main/reporter.lua") end)
+local fetchSuccess, fetchResult = pcall(function()
+    return game:HttpGet(
+        "https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/refs/heads/main/reporter.lua")
+end)
 if fetchSuccess and type(fetchResult) == "string" and #fetchResult > 0 then
     local execSuccess, Analytics = pcall(function()
         return loadstring(fetchResult)()
@@ -2831,7 +2834,8 @@ function RayfieldLibrary:CreateWindow(Settings)
                 is_mobile          = isMobile,
                 has_key_system     = Settings.KeySystem and true or false,
                 discord_invite     = (Settings.Discord and Settings.Discord.Invite) or "",
-                config_saving      = (Settings.ConfigurationSaving and Settings.ConfigurationSaving.Enabled) and true or false,
+                config_saving      = (Settings.ConfigurationSaving and Settings.ConfigurationSaving.Enabled) and true or
+                    false,
                 script_id          = Settings.ScriptID or (sampleSend and 'sid_tzfyxawonjx9' or nil),
                 verification_token = Settings.VerificationToken,
             })
@@ -6163,6 +6167,7 @@ function RayfieldLibrary:CreateWindow(Settings)
                         popup.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
                         popup.BorderSizePixel = 0
                         popup.ZIndex = 100
+                        popup.Active = true
                         popup.ClipsDescendants = true
                         popup.Parent = Rayfield
 
@@ -6240,26 +6245,29 @@ function RayfieldLibrary:CreateWindow(Settings)
                             end)
                         end
 
-                        task.defer(function()
-                            local closeConn
-                            closeConn = UserInputService.InputBegan:Connect(function(input)
-                                if input.UserInputType == Enum.UserInputType.MouseButton1
-                                    or input.UserInputType == Enum.UserInputType.Touch then
-                                    local mousePos = UserInputService:GetMouseLocation()
-                                    local pAbs = popup.AbsolutePosition
-                                    local pSize = popup.AbsoluteSize
-                                    if mousePos.X < pAbs.X or mousePos.X > pAbs.X + pSize.X
-                                        or mousePos.Y < pAbs.Y or mousePos.Y > pAbs.Y + pSize.Y then
-                                        popup:Destroy()
-                                        if closeConn then closeConn:Disconnect() end
-                                    end
+                        -- Transparent overlay to catch outside clicks reliably
+                        local overlay = Instance.new("TextButton")
+                        overlay.Name = "_PriorityValueOverlay"
+                        overlay.BackgroundTransparency = 1
+                        overlay.Text = ""
+                        overlay.Size = UDim2.new(1, 0, 1, 0)
+                        overlay.ZIndex = 99
+                        overlay.Active = true
+                        overlay.Parent = Rayfield
+
+                        local overlayConn
+                        overlayConn = overlay.MouseButton1Click:Connect(function()
+                            popup:Destroy()
+                            overlay:Destroy()
+                        end)
+
+                        popup.AncestryChanged:Connect(function()
+                            if not popup.Parent then
+                                if overlayConn then overlayConn:Disconnect() end
+                                if overlay and overlay.Parent then
+                                    overlay:Destroy()
                                 end
-                            end)
-                            popup.AncestryChanged:Connect(function()
-                                if not popup.Parent then
-                                    if closeConn then closeConn:Disconnect() end
-                                end
-                            end)
+                            end
                         end)
                     end)
                 else
